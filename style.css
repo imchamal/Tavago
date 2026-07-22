@@ -1,9 +1,11 @@
+/* Tavago 설정창 전체 배치입니다. */
 #tavago_settings {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
+/* 설정창 제목 줄입니다. */
 .tavago-title {
     display: flex;
     align-items: center;
@@ -15,6 +17,7 @@
     color: var(--SmartThemeQuoteColor);
 }
 
+/* 설정 라벨과 버튼 영역의 기본 간격입니다. */
 .tavago-label {
     font-weight: 600;
 }
@@ -25,12 +28,18 @@
     flex-wrap: wrap;
 }
 
+.tavago-help {
+    opacity: 0.8;
+}
+
 #tavago_translate_input {
     display: inline-flex;
     align-items: center;
     gap: 6px;
 }
 
+/* 메시지별 번역 버튼입니다.
+   SillyTavern의 기존 아이콘 줄과 섞이도록 배경과 테두리를 없앴습니다. */
 .tavago_translate_message {
     display: inline-flex;
     align-items: center;
@@ -45,13 +54,22 @@
     box-shadow: none;
     color: inherit;
     cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
+/* 번역 요청이 진행 중일 때의 상태입니다. */
 .tavago_translate_message.tavago-busy {
     opacity: 0.6;
     pointer-events: none;
 }
 
+.tavago_translate_message.tavago-active {
+    color: var(--SmartThemeQuoteColor);
+}
+
+/* 번역 중일 때 새 아이콘에 적용되는 애니메이션입니다. */
 .tavago-busy i {
     animation: tavago-busy-spin 0.9s linear infinite, tavago-busy-pulse 1.2s ease-in-out infinite;
 }

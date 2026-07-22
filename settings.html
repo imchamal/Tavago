@@ -1,23 +1,32 @@
 <div id="tavago_settings" class="tavago-settings">
+    <!-- Tavago 설정창 제목입니다. -->
     <div class="tavago-title">
         <i class="fa-solid fa-crow"></i>
         <span>Tavago</span>
     </div>
 
+    <!-- 번역 프롬프트에서 사용할 목표 언어입니다. -->
     <label class="tavago-label" for="tavago_target_language">
         번역할 언어
     </label>
     <input id="tavago_target_language" class="text_pole" type="text" value="Korean" />
 
+    <!-- 현재 연결된 SillyTavern API/모델에게 보낼 번역 지시문입니다. -->
     <label class="tavago-label" for="tavago_system_prompt">
         번역 지시문
     </label>
     <textarea id="tavago_system_prompt" class="text_pole textarea_compact" rows="5"></textarea>
 
+    <!-- 아직 전송하지 않은 입력창 내용만 번역하는 테스트 버튼입니다. -->
     <div class="tavago-actions">
         <button id="tavago_translate_input" class="menu_button">
             <i class="fa-solid fa-crow"></i>
             <span>입력창 번역</span>
         </button>
     </div>
+
+    <!-- 메시지 옆 Tavago 아이콘 사용법입니다. -->
+    <small class="tavago-help">
+        메시지의 새 아이콘을 누르면 번역/전환, 길게 누르면 재번역합니다.
+    </small>
 </div>
