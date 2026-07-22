@@ -167,6 +167,32 @@ function updateMessageButtonState(message, button) {
     }
 }
 
+// 메시지 번역 요청을 시작할 수 있는지 확인합니다.
+// 이미 번역 중이면 false를 돌려줘서 API 요청이 겹치지 않게 막습니다.
+function beginMessageTranslation(message, button) {
+    const tavagoData = getTavagoData(message);
+
+    if (tavagoData.translation_in_progress) {
+        return false;
+    }
+
+    tavagoData.translation_in_progress = true;
+    button.prop("disabled", true);
+    button.addClass("tavago-busy");
+
+    return true;
+}
+
+// 메시지 번역 요청이 끝났을 때 상태를 원래대로 돌립니다.
+function finishMessageTranslation(message, button) {
+    const tavagoData = getTavagoData(message);
+
+    tavagoData.translation_in_progress = false;
+    button.prop("disabled", false);
+    button.removeClass("tavago-busy");
+    updateMessageButtonState(message, button);
+}
+
 // 현재 SillyTavern에 연결된 API/모델에게 번역을 요청합니다.
 // Tavago는 별도 API 키를 받지 않고 generateRaw()를 사용합니다.
 async function translateText(text) {
@@ -246,20 +272,25 @@ async function toggleMessageTranslation(messageBlock, button) {
     const context = getContext();
     const messageId = getMessageIdFromBlock(messageBlock);
     const message = messageId === null ? null : context.chat?.[messageId];
+    let startedTranslation = false;
 
     if (!message || !message.mes) {
         showError("번역할 메시지를 찾지 못했습니다.");
         return;
     }
 
-    button.prop("disabled", true);
-    button.addClass("tavago-busy");
-
     try {
         const tavagoData = getTavagoData(message);
 
         if (!hasSavedTranslation(message)) {
+            if (!beginMessageTranslation(message, button)) {
+                return;
+            }
+
+            startedTranslation = true;
             await translateAndSaveMessage(message);
+            finishMessageTranslation(message, button);
+            startedTranslation = false;
             showInfo("메시지 번역이 완료되었습니다.");
         } else if (tavagoData.showing_translation) {
             showOriginal(message);
@@ -273,8 +304,12 @@ async function toggleMessageTranslation(messageBlock, button) {
         console.error(error);
         showError(error.message || "메시지 번역 중 오류가 발생했습니다.");
     } finally {
-        button.prop("disabled", false);
-        button.removeClass("tavago-busy");
+        if (startedTranslation) {
+            finishMessageTranslation(message, button);
+        } else {
+            updateMessageButtonState(message, button);
+        }
+
         addTranslateButtonsToMessages();
     }
 }
@@ -285,26 +320,33 @@ async function retranslateMessage(messageBlock, button) {
     const context = getContext();
     const messageId = getMessageIdFromBlock(messageBlock);
     const message = messageId === null ? null : context.chat?.[messageId];
+    let startedTranslation = false;
 
     if (!message || !message.mes) {
         showError("재번역할 메시지를 찾지 못했습니다.");
         return;
     }
 
-    button.prop("disabled", true);
-    button.addClass("tavago-busy");
+    if (!beginMessageTranslation(message, button)) {
+        return;
+    }
+
+    startedTranslation = true;
 
     try {
         await translateAndSaveMessage(message, true);
-        updateMessageButtonState(message, button);
+        finishMessageTranslation(message, button);
+        startedTranslation = false;
         await refreshMessageAndSave(context, messageId, message);
         showInfo("메시지 재번역이 완료되었습니다.");
     } catch (error) {
         console.error(error);
         showError(error.message || "메시지 재번역 중 오류가 발생했습니다.");
     } finally {
-        button.prop("disabled", false);
-        button.removeClass("tavago-busy");
+        if (startedTranslation) {
+            finishMessageTranslation(message, button);
+        }
+
         addTranslateButtonsToMessages();
     }
 }
@@ -322,7 +364,7 @@ async function autoTranslateMessage(messageBlock) {
 
     const tavagoData = getTavagoData(message);
 
-    if (tavagoData.translated_text || tavagoData.auto_translate_started) {
+    if (tavagoData.translated_text || tavagoData.auto_translate_started || tavagoData.translation_in_progress) {
         return;
     }
 
@@ -342,25 +384,32 @@ async function autoTranslateMessage(messageBlock) {
 
         const latestTavagoData = getTavagoData(latestMessage);
         const button = $(messageBlock).find(`.${messageButtonClass}`).first();
+        let startedTranslation = false;
 
-        if (latestTavagoData.translated_text) {
+        if (latestTavagoData.translated_text || latestTavagoData.translation_in_progress) {
             return;
         }
 
-        button.prop("disabled", true);
-        button.addClass("tavago-busy");
+        if (!beginMessageTranslation(latestMessage, button)) {
+            return;
+        }
+
+        startedTranslation = true;
 
         try {
             await translateAndSaveMessage(latestMessage);
-            updateMessageButtonState(latestMessage, button);
+            finishMessageTranslation(latestMessage, button);
+            startedTranslation = false;
             await refreshMessageAndSave(latestContext, messageId, latestMessage);
         } catch (error) {
             latestTavagoData.auto_translate_started = false;
             console.error(error);
             showError(error.message || "자동 번역 중 오류가 발생했습니다.");
         } finally {
-            button.prop("disabled", false);
-            button.removeClass("tavago-busy");
+            if (startedTranslation) {
+                finishMessageTranslation(latestMessage, button);
+            }
+
             addTranslateButtonsToMessages();
         }
     }, autoTranslateDelayMs);
