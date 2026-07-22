@@ -11,6 +11,17 @@
     </label>
     <input id="tavago_target_language" class="text_pole" type="text" value="Korean" />
 
+    <!-- 새 메시지가 생겼을 때 어떤 메시지를 자동 번역할지 정합니다. -->
+    <label class="tavago-label" for="tavago_auto_translate_mode">
+        자동 번역 대상
+    </label>
+    <select id="tavago_auto_translate_mode" class="text_pole">
+        <option value="off">끄기</option>
+        <option value="all">전체</option>
+        <option value="user">유저 메시지만</option>
+        <option value="ai">AI 메시지만</option>
+    </select>
+
     <!-- 현재 연결된 SillyTavern API/모델에게 보낼 번역 지시문입니다. -->
     <label class="tavago-label" for="tavago_system_prompt">
         번역 지시문

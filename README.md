@@ -11,6 +11,7 @@ Tavago is a minimal SillyTavern translation extension test.
 - Adds a Tavago translate button to chat messages.
 - Short press on a message button toggles original/translation.
 - Long press on a message button retranslates the message.
+- Auto-translates new messages by selected target: off, all, user only, or AI only.
 
 ## Install for testing
 

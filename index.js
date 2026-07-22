@@ -12,11 +12,14 @@ const messageButtonClass = "tavago_translate_message";
 const activeButtonClass = "tavago-active";
 const tavagoIconClass = "fa-solid fa-crow";
 const longPressMs = 650;
+const autoTranslateDelayMs = 1500;
+const seenMessageIds = new Set();
 
 // 처음 실행할 때 사용할 기본 설정입니다.
 // 이미 저장된 설정이 있으면 getSettings()에서 이 값들과 합쳐집니다.
 const defaultSettings = {
     targetLanguage: "Korean",
+    autoTranslateMode: "ai",
     systemPrompt: [
         "You are Tavago, a precise translation engine.",
         "Translate the user's text into {{language}}.",
@@ -83,6 +86,34 @@ function getTavagoData(message) {
     }
 
     return message.extra.tavago;
+}
+
+// 자동 번역 설정값에 따라 이 메시지를 자동 번역할지 판단합니다.
+// off: 자동 번역 안 함, all: 전체, user: 유저 메시지만, ai: AI 메시지만
+function shouldAutoTranslateMessage(message) {
+    const settings = getSettings();
+
+    if (!message || !message.mes) {
+        return false;
+    }
+
+    if (settings.autoTranslateMode === "off") {
+        return false;
+    }
+
+    if (settings.autoTranslateMode === "all") {
+        return true;
+    }
+
+    if (settings.autoTranslateMode === "user") {
+        return message.is_user === true;
+    }
+
+    if (settings.autoTranslateMode === "ai") {
+        return message.is_user !== true;
+    }
+
+    return false;
 }
 
 // 이 메시지에 Tavago 번역문이 이미 저장되어 있는지 확인합니다.
@@ -278,6 +309,63 @@ async function retranslateMessage(messageBlock, button) {
     }
 }
 
+// 자동 번역을 실행합니다.
+// MutationObserver는 같은 메시지를 여러 번 감지할 수 있으므로 중복 실행을 막습니다.
+async function autoTranslateMessage(messageBlock) {
+    const context = getContext();
+    const messageId = getMessageIdFromBlock(messageBlock);
+    const message = messageId === null ? null : context.chat?.[messageId];
+
+    if (!message || !shouldAutoTranslateMessage(message)) {
+        return;
+    }
+
+    const tavagoData = getTavagoData(message);
+
+    if (tavagoData.translated_text || tavagoData.auto_translate_started) {
+        return;
+    }
+
+    tavagoData.auto_translate_started = true;
+
+    setTimeout(async () => {
+        const latestContext = getContext();
+        const latestMessage = latestContext.chat?.[messageId];
+
+        if (!latestMessage || !shouldAutoTranslateMessage(latestMessage)) {
+            if (latestMessage) {
+                getTavagoData(latestMessage).auto_translate_started = false;
+            }
+
+            return;
+        }
+
+        const latestTavagoData = getTavagoData(latestMessage);
+        const button = $(messageBlock).find(`.${messageButtonClass}`).first();
+
+        if (latestTavagoData.translated_text) {
+            return;
+        }
+
+        button.prop("disabled", true);
+        button.addClass("tavago-busy");
+
+        try {
+            await translateAndSaveMessage(latestMessage);
+            updateMessageButtonState(latestMessage, button);
+            await refreshMessageAndSave(latestContext, messageId, latestMessage);
+        } catch (error) {
+            latestTavagoData.auto_translate_started = false;
+            console.error(error);
+            showError(error.message || "자동 번역 중 오류가 발생했습니다.");
+        } finally {
+            button.prop("disabled", false);
+            button.removeClass("tavago-busy");
+            addTranslateButtonsToMessages();
+        }
+    }, autoTranslateDelayMs);
+}
+
 // 메시지 안에 있는 기존 SillyTavern 아이콘 버튼 영역을 찾습니다.
 // 버튼 영역을 못 찾으면 임시로 메시지 전체 영역에 버튼을 붙입니다.
 function findMessageButtonContainer(messageBlock) {
@@ -360,8 +448,22 @@ function addTranslateButtonToMessage(messageBlock) {
 }
 
 // 화면에 보이는 모든 채팅 메시지에 Tavago 버튼을 붙입니다.
-function addTranslateButtonsToMessages() {
-    document.querySelectorAll("#chat .mes").forEach(addTranslateButtonToMessage);
+// allowAutoTranslate가 true일 때만 새 메시지 자동 번역도 같이 확인합니다.
+function addTranslateButtonsToMessages(allowAutoTranslate = false) {
+    document.querySelectorAll("#chat .mes").forEach((messageBlock) => {
+        const messageId = getMessageIdFromBlock(messageBlock);
+        const isNewMessage = messageId !== null && !seenMessageIds.has(messageId);
+
+        addTranslateButtonToMessage(messageBlock);
+
+        if (messageId !== null) {
+            seenMessageIds.add(messageId);
+        }
+
+        if (allowAutoTranslate && isNewMessage) {
+            autoTranslateMessage(messageBlock);
+        }
+    });
 }
 
 // 채팅 영역을 감시합니다.
@@ -373,7 +475,7 @@ function watchChatMessages() {
         return;
     }
 
-    const observer = new MutationObserver(addTranslateButtonsToMessages);
+    const observer = new MutationObserver(() => addTranslateButtonsToMessages(true));
     observer.observe(chat, { childList: true, subtree: true });
     addTranslateButtonsToMessages();
 }
@@ -382,6 +484,7 @@ function watchChatMessages() {
 function loadSettingsToUi() {
     const settings = getSettings();
     $("#tavago_target_language").val(settings.targetLanguage);
+    $("#tavago_auto_translate_mode").val(settings.autoTranslateMode);
     $("#tavago_system_prompt").val(settings.systemPrompt);
 }
 
@@ -390,6 +493,11 @@ function loadSettingsToUi() {
 function bindSettingsEvents() {
     $("#tavago_target_language").on("input", function () {
         getSettings().targetLanguage = String($(this).val() || "Korean").trim() || "Korean";
+        saveSettingsDebounced();
+    });
+
+    $("#tavago_auto_translate_mode").on("change", function () {
+        getSettings().autoTranslateMode = String($(this).val() || "off");
         saveSettingsDebounced();
     });
 
