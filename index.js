@@ -1,5 +1,5 @@
 import { extension_settings, getContext } from "../../../extensions.js";
-import { executeSlashCommands } from "../../../slash-commands.js";
+import { ConnectionManagerRequestService } from "../../shared.js";
 import { saveSettingsDebounced } from "../../../../script.js";
 
 // Pavago 확장프로그램의 이름과 폴더 경로입니다.
@@ -138,6 +138,44 @@ function buildGenerateRawOptions(promptInfo, promptText) {
     };
 }
 
+// 연결 프로필 직접 요청에 사용할 메시지 배열입니다.
+// 전역 /profile 전환을 하지 않기 때문에 SillyTavern의 현재 연결 프로필은 바뀌지 않습니다.
+function buildConnectionProfilePrompt(promptInfo, promptText) {
+    return [
+        { role: "system", content: promptInfo.systemPrompt },
+        { role: "user", content: promptText },
+    ];
+}
+
+// 선택된 연결 프로필로 번역 요청을 직접 보냅니다.
+// Chat Completion 프로필은 메시지 배열을 그대로 쓰고, Text Completion 프로필은 서비스가 알맞은 프롬프트로 변환하게 합니다.
+async function sendTranslationWithConnectionProfile(profileId, promptInfo, promptText) {
+    const options = getGenerationOptions();
+    const messages = buildConnectionProfilePrompt(promptInfo, promptText);
+    const normalizedProfileId = normalizeConnectionProfileId(profileId);
+
+    if (!getConnectionProfiles().some((profile) => profile.id === normalizedProfileId)) {
+        throw new Error("선택한 API 연결 프로필을 찾을 수 없거나 번역 요청에 사용할 수 없습니다.");
+    }
+
+    const prompt = ConnectionManagerRequestService.constructPrompt(messages, normalizedProfileId);
+
+    return ConnectionManagerRequestService.sendRequest(
+        normalizedProfileId,
+        prompt,
+        options.maxTokens,
+        {
+            stream: false,
+            extractData: true,
+            includePreset: true,
+            includeInstruct: true,
+        },
+        {
+            temperature: options.temperature,
+        },
+    );
+}
+
 // SillyTavern에 저장된 Pavago 설정을 읽습니다.
 // 빠진 값이 있으면 위의 기본 설정으로 채워줍니다.
 function getSettings() {
@@ -208,85 +246,51 @@ function getMessageTargetLanguageCode() {
 
 // SillyTavern의 API 연결 프로필 목록을 가져옵니다.
 // 연결 프로필 내장 확장이 꺼져 있거나 아직 준비되지 않았으면 빈 목록을 반환합니다.
-function getConnectionProfileNames() {
-    const profiles = extension_settings.connectionManager?.profiles;
+function getConnectionProfiles() {
+    let profiles = [];
+
+    try {
+        profiles = ConnectionManagerRequestService.getSupportedProfiles();
+    } catch {
+        profiles = extension_settings.connectionManager?.profiles || [];
+    }
 
     if (!Array.isArray(profiles)) {
         return [];
     }
 
     return profiles
-        .map((profile) => {
-            if (typeof profile === "string") {
-                return profile;
-            }
-
-            return profile?.name;
-        })
-        .filter((name) => typeof name === "string" && name.trim())
-        .map((name) => name.trim())
-        .filter((name, index, names) => names.indexOf(name) === index);
+        .filter((profile) => profile && typeof profile === "object")
+        .filter((profile) => typeof profile.id === "string" && profile.id.trim())
+        .filter((profile) => typeof profile.name === "string" && profile.name.trim());
 }
 
-// 연결 프로필 이름을 slash command에 안전하게 넘기기 위해 큰따옴표 문자열로 만듭니다.
-function quoteSlashArgument(value) {
-    return `"${String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
-}
+// 저장된 프로필 값이 예전 이름 방식이든 새 ID 방식이든 현재 프로필 ID로 정리합니다.
+function normalizeConnectionProfileId(profileValue) {
+    const normalizedValue = String(profileValue || "").trim();
 
-// 연결 프로필 명령 실행 결과에서 pipe 값을 꺼냅니다.
-function getSlashCommandPipe(result) {
-    return result?.pipe === undefined || result?.pipe === null ? "" : String(result.pipe);
-}
-
-// SillyTavern은 프로필 없음 상태를 <None>으로 표현할 수 있으므로 Pavago 내부에서는 빈 문자열로 통일합니다.
-function normalizeConnectionProfileName(profileName) {
-    const normalized = String(profileName || "").trim();
-
-    return normalized === "<None>" ? "" : normalized;
-}
-
-// 현재 선택된 연결 프로필 이름을 가져옵니다.
-async function getCurrentConnectionProfileName() {
-    const result = await executeSlashCommands("/profile", false, null, true);
-
-    return normalizeConnectionProfileName(getSlashCommandPipe(result));
-}
-
-// 지정한 연결 프로필로 전환합니다. 빈 문자열이면 프로필 없음 상태로 전환합니다.
-async function switchConnectionProfile(profileName) {
-    const profileArgument = profileName ? quoteSlashArgument(profileName) : "<None>";
-    const result = await executeSlashCommands(`/profile ${profileArgument}`, false, null, true);
-
-    if (result?.isError) {
-        throw new Error(result.errorMessage || "연결 프로필 전환에 실패했습니다.");
-    }
-}
-
-// Pavago에서 선택한 연결 프로필을 적용한 상태로 작업을 실행합니다.
-// /profile은 SillyTavern 전체 연결 설정을 바꾸므로, 작업 후 이전 프로필로 되돌립니다.
-async function runWithSelectedConnectionProfile(task) {
-    const selectedProfile = normalizeConnectionProfileName(getSettings().connectionProfile);
-
-    if (!selectedProfile) {
-        return task();
+    if (!normalizedValue || normalizedValue === "<None>") {
+        return "";
     }
 
-    const currentProfile = await getCurrentConnectionProfileName();
+    const profiles = getConnectionProfiles();
+    const matchedProfile = profiles.find((profile) => (
+        profile.id === normalizedValue ||
+        profile.name === normalizedValue
+    ));
 
-    if (currentProfile !== selectedProfile) {
-        await switchConnectionProfile(selectedProfile);
-    }
-
-    try {
-        return await task();
-    } finally {
-        if (currentProfile !== selectedProfile) {
-            await switchConnectionProfile(currentProfile);
-        }
-    }
+    return matchedProfile?.id || normalizedValue;
 }
 
-// 프로필 전환은 전역 연결 상태를 바꾸므로 번역 요청을 한 번에 하나씩 처리합니다.
+// 저장된 프로필 ID를 화면에 보여줄 이름으로 바꿉니다.
+function getConnectionProfileLabel(profileId) {
+    const normalizedProfileId = normalizeConnectionProfileId(profileId);
+    const profile = getConnectionProfiles().find((candidate) => candidate.id === normalizedProfileId);
+
+    return profile?.name || normalizedProfileId;
+}
+
+// 연결 프로필 요청과 저장 처리가 겹치지 않도록 번역 요청을 한 번에 하나씩 처리합니다.
 function enqueueTranslationTask(task) {
     const queuedTask = translationQueue.then(task, task);
     translationQueue = queuedTask.catch(() => {});
@@ -345,7 +349,7 @@ function getValidInputTranslationState(currentText) {
             inputTranslationState.targetLanguage === promptInfo.targetLanguage &&
             inputTranslationState.promptUsed === promptInfo.systemPrompt &&
             inputTranslationState.generationSettings === getGenerationSettingsKey(false) &&
-            normalizeConnectionProfileName(inputTranslationState.connectionProfile) === normalizeConnectionProfileName(getSettings().connectionProfile)
+            normalizeConnectionProfileId(inputTranslationState.connectionProfile) === normalizeConnectionProfileId(getSettings().connectionProfile)
         );
 
         if (isSameSettings) {
@@ -546,7 +550,7 @@ function isTranslationOutdated(message) {
         pavagoData.target_language !== promptInfo.targetLanguage ||
         pavagoData.prompt_used !== promptInfo.systemPrompt ||
         pavagoData.generation_settings !== getGenerationSettingsKey() ||
-        normalizeConnectionProfileName(pavagoData.connection_profile) !== normalizeConnectionProfileName(getSettings().connectionProfile)
+        normalizeConnectionProfileId(pavagoData.connection_profile) !== normalizeConnectionProfileId(getSettings().connectionProfile)
     );
 }
 
@@ -876,13 +880,16 @@ async function translateText(text, targetLanguageCode, translationType = "messag
     const context = getContext();
     const promptInfo = buildTranslationPrompt(targetLanguageCode, translationType);
     const promptText = buildPromptWithContext(text, contextText);
+    const selectedProfileId = normalizeConnectionProfileId(getSettings().connectionProfile);
 
-    if (typeof context.generateRaw !== "function") {
+    if (!selectedProfileId && typeof context.generateRaw !== "function") {
         throw new Error("현재 SillyTavern에서 generateRaw()를 찾을 수 없습니다.");
     }
 
-    const translatedText = await enqueueTranslationTask(() => runWithSelectedConnectionProfile(() => (
-        context.generateRaw(buildGenerateRawOptions(promptInfo, promptText))
+    const translatedText = await enqueueTranslationTask(() => (
+        selectedProfileId
+            ? sendTranslationWithConnectionProfile(selectedProfileId, promptInfo, promptText)
+            : context.generateRaw(buildGenerateRawOptions(promptInfo, promptText))
     )));
 
     return {
@@ -890,7 +897,7 @@ async function translateText(text, targetLanguageCode, translationType = "messag
         targetLanguage: promptInfo.targetLanguage,
         promptUsed: promptInfo.systemPrompt,
         generationSettings: getGenerationSettingsKey(translationType === "message"),
-        connectionProfile: normalizeConnectionProfileName(getSettings().connectionProfile),
+        connectionProfile: selectedProfileId,
     };
 }
 
@@ -1331,21 +1338,26 @@ function watchChatMessages() {
 function renderConnectionProfileOptions() {
     const settings = getSettings();
     const select = $("#pavago_connection_profile");
-    const selectedProfile = normalizeConnectionProfileName(settings.connectionProfile);
-    const profileNames = getConnectionProfileNames();
+    const selectedProfileId = normalizeConnectionProfileId(settings.connectionProfile);
+    const profiles = getConnectionProfiles();
 
     select.empty();
     select.append($("<option></option>").val("").text("기본값 사용"));
 
-    profileNames.forEach((profileName) => {
-        select.append($("<option></option>").val(profileName).text(profileName));
+    profiles.forEach((profile) => {
+        select.append($("<option></option>").val(profile.id).text(profile.name));
     });
 
-    if (selectedProfile && !profileNames.includes(selectedProfile)) {
-        select.append($("<option></option>").val(selectedProfile).text(`${selectedProfile} (찾을 수 없음)`));
+    if (selectedProfileId && !profiles.some((profile) => profile.id === selectedProfileId)) {
+        select.append($("<option></option>").val(selectedProfileId).text(`${getConnectionProfileLabel(selectedProfileId)} (찾을 수 없음)`));
     }
 
-    select.val(selectedProfile);
+    if (selectedProfileId && settings.connectionProfile !== selectedProfileId && profiles.some((profile) => profile.id === selectedProfileId)) {
+        settings.connectionProfile = selectedProfileId;
+        saveSettingsDebounced();
+    }
+
+    select.val(selectedProfileId);
 }
 
 // 저장된 설정값을 설정창 화면에 채워 넣습니다.
@@ -1370,7 +1382,7 @@ function bindSettingsEvents() {
     $("#pavago_connection_profile").on("focus click", renderConnectionProfileOptions);
 
     $("#pavago_connection_profile").on("change", function () {
-        getSettings().connectionProfile = normalizeConnectionProfileName($(this).val());
+        getSettings().connectionProfile = normalizeConnectionProfileId($(this).val());
         saveSettingsDebounced();
     });
 
