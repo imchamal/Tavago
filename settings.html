@@ -5,37 +5,68 @@
         <span>Tavago</span>
     </div>
 
-    <!-- 입력창 내용을 번역할 목표 언어입니다. 보통 한국어로 쓴 뒤 영어로 보낼 때 씁니다. -->
-    <label class="tavago-label" for="tavago_input_target_language">
-        입력창 번역 언어
-    </label>
-    <input id="tavago_input_target_language" class="text_pole" type="text" value="English" />
+    <div class="tavago-section">
+        <div class="tavago-section-title">기본 설정</div>
 
-    <!-- 채팅 메시지를 화면에서 읽기 좋게 번역할 목표 언어입니다. -->
-    <label class="tavago-label" for="tavago_message_target_language">
-        메시지 번역 언어
-    </label>
-    <input id="tavago_message_target_language" class="text_pole" type="text" value="Korean" />
+        <!-- 채팅 메시지를 읽을 때 사용할 목표 언어입니다. -->
+        <label class="tavago-label" for="tavago_target_language">
+            목표 언어
+        </label>
+        <select id="tavago_target_language" class="text_pole">
+            <option value="ko">한국어</option>
+            <option value="en">영어</option>
+        </select>
 
-    <!-- 새 메시지가 생겼을 때 어떤 메시지를 자동 번역할지 정합니다. -->
-    <label class="tavago-label" for="tavago_auto_translate_mode">
-        자동 번역 대상
-    </label>
-    <select id="tavago_auto_translate_mode" class="text_pole">
-        <option value="off">끄기</option>
-        <option value="all">전체</option>
-        <option value="user">유저 메시지만</option>
-        <option value="ai">AI 메시지만</option>
-    </select>
+        <!-- 한<->영이면 입력창은 목표 언어의 반대 방향으로 번역합니다. -->
+        <label class="tavago-label" for="tavago_bidirectional_mode">
+            양방향 번역
+        </label>
+        <select id="tavago_bidirectional_mode" class="text_pole">
+            <option value="off">끄기</option>
+            <option value="ko-en">한&lt;-&gt;영</option>
+        </select>
+    </div>
 
-    <!-- 현재 연결된 SillyTavern API/모델에게 보낼 번역 지시문입니다. -->
-    <label class="tavago-label" for="tavago_system_prompt">
-        번역 지시문
-    </label>
-    <textarea id="tavago_system_prompt" class="text_pole textarea_compact" rows="5"></textarea>
+    <div class="tavago-section">
+        <div class="tavago-section-title">자동 번역</div>
+
+        <!-- 새 메시지가 생겼을 때 어떤 메시지를 자동 번역할지 정합니다. -->
+        <label class="tavago-label" for="tavago_auto_translate_mode">
+            자동 번역 대상
+        </label>
+        <select id="tavago_auto_translate_mode" class="text_pole">
+            <option value="off">끄기</option>
+            <option value="all">둘 다</option>
+            <option value="user">유저 메시지만</option>
+            <option value="ai">AI 메시지만</option>
+        </select>
+    </div>
+
+    <div class="tavago-section">
+        <div class="tavago-section-title">표시 방식</div>
+
+        <!-- 대사나 속마음 등을 원문 [번역문] 형태로 병기합니다. -->
+        <label class="tavago-label" for="tavago_dual_line_mode">
+            대사 병기
+        </label>
+        <select id="tavago_dual_line_mode" class="text_pole">
+            <option value="off">끄기</option>
+            <option value="on">원문 [번역문]</option>
+        </select>
+    </div>
+
+    <div class="tavago-section">
+        <div class="tavago-section-title">고급 설정</div>
+
+        <!-- 기본 Tavago 프롬프트는 유지되고, 여기에 적은 내용만 추가됩니다. -->
+        <label class="tavago-label" for="tavago_custom_prompt">
+            추가 번역 지시문
+        </label>
+        <textarea id="tavago_custom_prompt" class="text_pole textarea_compact" rows="4"></textarea>
+    </div>
 
     <!-- 메시지 옆 Tavago 아이콘 사용법입니다. -->
     <small class="tavago-help">
-        전송 버튼 옆 새 아이콘은 입력창을 번역하고, 메시지의 새 아이콘은 번역/전환합니다. 길게 누르면 재번역합니다.
+        전송 버튼 옆 아이콘: 입력창 번역/전환. 메시지 아이콘: 번역/전환. 길게 누르기: 재번역.
     </small>
 </div>

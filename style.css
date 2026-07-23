@@ -17,6 +17,17 @@
     color: var(--SmartThemeQuoteColor);
 }
 
+.tavago-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tavago-section-title {
+    font-weight: 700;
+    opacity: 0.9;
+}
+
 /* 설정 라벨과 버튼 영역의 기본 간격입니다. */
 .tavago-label {
     font-weight: 600;
@@ -75,26 +86,19 @@
 /* 번역 중일 때 새 아이콘에 적용되는 애니메이션입니다. */
 .tavago-busy i,
 #tavago_translate_input.tavago-busy {
-    animation: tavago-busy-spin 0.9s linear infinite, tavago-busy-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes tavago-busy-spin {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
+    animation: tavago-busy-pulse 0.9s ease-in-out infinite;
+    transform-origin: center;
 }
 
 @keyframes tavago-busy-pulse {
     0%,
     100% {
-        opacity: 0.45;
+        opacity: 0.55;
+        transform: scale(0.92);
     }
 
     50% {
         opacity: 1;
+        transform: scale(1.18);
     }
 }
