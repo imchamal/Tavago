@@ -1,67 +1,67 @@
-<div id="pavago_settings" class="pavago-settings">
+<div id="babel_settings" class="babel-settings">
     <div class="inline-drawer">
         <!-- SillyTavern 기본 확장 설정처럼 접고 펼칠 수 있는 제목 줄입니다. -->
         <div class="inline-drawer-toggle inline-drawer-header">
-            <div class="pavago-title">
-                <span class="pavago-title-icon"></span>
-                <b>Pavago</b>
+            <div class="babel-title">
+                <i class="babel-title-icon fa-solid fa-language"></i>
+                <b>Babel</b>
             </div>
             <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
         </div>
 
         <div class="inline-drawer-content">
-            <div class="pavago-field pavago-field-full pavago-field-first">
-                <!-- Pavago 번역 요청에 사용할 SillyTavern API 연결 프로필입니다. -->
-                <label class="pavago-label" for="pavago_connection_profile">
+            <div class="babel-field babel-field-full babel-field-first">
+                <!-- Babel 번역 요청에 사용할 SillyTavern API 연결 프로필입니다. -->
+                <label class="babel-label" for="babel_connection_profile">
                     API 연결 프로필
                 </label>
-                <select id="pavago_connection_profile" class="text_pole">
+                <select id="babel_connection_profile" class="text_pole">
                     <option value="">기본값 사용</option>
                 </select>
             </div>
 
-            <div class="pavago-grid pavago-grid-three">
-                <div class="pavago-field">
+            <div class="babel-grid babel-grid-three">
+                <div class="babel-field">
                     <!-- 채팅 메시지를 읽을 때 사용할 목표 언어입니다. -->
-                    <label class="pavago-label" for="pavago_target_language">
+                    <label class="babel-label" for="babel_target_language">
                         목표 언어
                     </label>
-                    <select id="pavago_target_language" class="text_pole">
+                    <select id="babel_target_language" class="text_pole">
                         <option value="ko">한국어</option>
                         <option value="en">영어</option>
                     </select>
                 </div>
 
-                <div class="pavago-field">
+                <div class="babel-field">
                     <!-- 한<->영이면 입력창은 목표 언어의 반대 방향으로 번역합니다. -->
-                    <label class="pavago-label" for="pavago_bidirectional_mode">
+                    <label class="babel-label" for="babel_bidirectional_mode">
                         양방향 번역
                     </label>
-                    <select id="pavago_bidirectional_mode" class="text_pole">
+                    <select id="babel_bidirectional_mode" class="text_pole">
                         <option value="off">끄기</option>
                         <option value="ko-en">한&lt;-&gt;영</option>
                     </select>
                 </div>
 
-                <div class="pavago-field">
+                <div class="babel-field">
                     <!-- 대사나 속마음 등을 원문 [번역문] 형태로 병기합니다. -->
-                    <label class="pavago-label" for="pavago_dual_line_mode">
+                    <label class="babel-label" for="babel_dual_line_mode">
                         대사 병기
                     </label>
-                    <select id="pavago_dual_line_mode" class="text_pole">
+                    <select id="babel_dual_line_mode" class="text_pole">
                         <option value="off">끄기</option>
                         <option value="on">원문 [번역문]</option>
                     </select>
                 </div>
             </div>
 
-            <div class="pavago-grid pavago-grid-two">
-                <div class="pavago-field">
+            <div class="babel-grid babel-grid-two">
+                <div class="babel-field">
                     <!-- 새 메시지가 생겼을 때 어떤 메시지를 자동 번역할지 정합니다. -->
-                    <label class="pavago-label" for="pavago_auto_translate_mode">
+                    <label class="babel-label" for="babel_auto_translate_mode">
                         자동 번역
                     </label>
-                    <select id="pavago_auto_translate_mode" class="text_pole">
+                    <select id="babel_auto_translate_mode" class="text_pole">
                         <option value="off">끄기</option>
                         <option value="all">둘 다</option>
                         <option value="user">유저 메시지만</option>
@@ -69,79 +69,79 @@
                     </select>
                 </div>
 
-                <div class="pavago-field">
+                <div class="babel-field">
                     <!-- 입력창 원문을 수정했을 때 기존 번역 상태를 어떻게 처리할지 정합니다. -->
-                    <label class="pavago-label" for="pavago_input_edit_mode">
+                    <label class="babel-label" for="babel_input_edit_mode">
                         입력 수정 후
                     </label>
-                    <select id="pavago_input_edit_mode" class="text_pole">
+                    <select id="babel_input_edit_mode" class="text_pole">
                         <option value="manual">수동 번역</option>
                         <option value="auto">자동 재번역</option>
                     </select>
                 </div>
             </div>
 
-            <div class="pavago-grid pavago-grid-two">
-                <div class="pavago-field">
+            <div class="babel-grid babel-grid-two">
+                <div class="babel-field">
                     <!-- 번역 결과의 문체를 정합니다. 공통 번역 규칙은 그대로 유지됩니다. -->
-                    <label class="pavago-label" for="pavago_translation_style">
+                    <label class="babel-label" for="babel_translation_style">
                         문체
                     </label>
-                    <select id="pavago_translation_style" class="text_pole">
+                    <select id="babel_translation_style" class="text_pole">
                         <option value="normal">일반</option>
                         <option value="novel">소설</option>
                         <option value="natural">번역체 탈피</option>
                     </select>
                 </div>
 
-                <div class="pavago-field">
+                <div class="babel-field">
                     <!-- 현재 메시지 앞의 몇 개 메시지를 참고용 문맥으로 함께 보낼지 정합니다. -->
-                    <label class="pavago-label" for="pavago_context_message_count">
+                    <label class="babel-label" for="babel_context_message_count">
                         문맥
                     </label>
-                    <input id="pavago_context_message_count" class="text_pole" type="number" min="0" max="20" step="1">
+                    <input id="babel_context_message_count" class="text_pole" type="number" min="0" max="20" step="1">
                 </div>
             </div>
 
-            <div class="pavago-grid pavago-grid-two">
-                <div class="pavago-field">
+            <div class="babel-grid babel-grid-two">
+                <div class="babel-field">
                     <!-- 낮을수록 안정적이고, 높을수록 표현이 다양해집니다. -->
-                    <label class="pavago-label" for="pavago_temperature">
+                    <label class="babel-label" for="babel_temperature">
                         온도
                     </label>
-                    <input id="pavago_temperature" class="text_pole" type="number" min="0" max="2" step="0.1">
+                    <input id="babel_temperature" class="text_pole" type="number" min="0" max="2" step="0.1">
                 </div>
 
-                <div class="pavago-field">
+                <div class="babel-field">
                     <!-- 번역 결과가 길 때 잘리지 않도록 최대 출력량을 정합니다. -->
-                    <label class="pavago-label" for="pavago_max_tokens">
+                    <label class="babel-label" for="babel_max_tokens">
                         토큰
                     </label>
-                    <input id="pavago_max_tokens" class="text_pole" type="number" min="100" max="8000" step="100">
+                    <input id="babel_max_tokens" class="text_pole" type="number" min="100" max="8000" step="100">
                 </div>
             </div>
 
-            <div class="pavago-field pavago-field-full">
-                <!-- 기본 Pavago 프롬프트는 유지되고, 여기에 적은 내용만 추가됩니다. -->
-                <label class="pavago-label" for="pavago_custom_prompt">
+            <div class="babel-field babel-field-full">
+                <!-- 기본 Babel 프롬프트는 유지되고, 여기에 적은 내용만 추가됩니다. -->
+                <label class="babel-label" for="babel_custom_prompt">
                     추가 번역 지시문
                 </label>
-                <textarea id="pavago_custom_prompt" class="text_pole textarea_compact" rows="4"></textarea>
+                <textarea id="babel_custom_prompt" class="text_pole textarea_compact" rows="4"></textarea>
             </div>
 
-            <div class="pavago-field pavago-field-full">
-                <!-- 현재 채팅에 저장된 Pavago 번역 결과만 지우고, 확장 설정과 원문은 유지합니다. -->
-                <button id="pavago_clear_chat_translations" class="menu_button pavago-clear-cache-button" type="button">
+            <div class="babel-field babel-field-full">
+                <!-- 현재 채팅에 저장된 Babel 번역 결과만 지우고, 확장 설정과 원문은 유지합니다. -->
+                <button id="babel_clear_chat_translations" class="menu_button babel-clear-cache-button" type="button">
                     <i class="fa-solid fa-trash-can"></i>
                     <span>캐시 초기화</span>
                 </button>
-                <small class="pavago-help">
-                    현재 채팅에 저장된 Pavago 번역만 삭제합니다.
+                <small class="babel-help">
+                    현재 채팅에 저장된 Babel 번역만 삭제합니다.
                 </small>
             </div>
 
-            <!-- 메시지 옆 Pavago 아이콘 사용법입니다. -->
-            <small class="pavago-help">
+            <!-- 메시지 옆 Babel 아이콘 사용법입니다. -->
+            <small class="babel-help">
                 전송 버튼 옆 아이콘은 입력창을 번역하거나 전환합니다. 메시지 아이콘은 메시지를 번역하거나 전환합니다. 길게 누르면 재번역합니다.
             </small>
         </div>

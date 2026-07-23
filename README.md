@@ -1,6 +1,6 @@
-# Pavago
+# Babel
 
-Pavago is a SillyTavern translation extension that uses the currently selected SillyTavern API connection.
+Babel is a SillyTavern translation extension that uses the currently selected SillyTavern API connection.
 
 ## Features
 
@@ -24,13 +24,13 @@ Pavago is a SillyTavern translation extension that uses the currently selected S
 Place this folder here:
 
 ```text
-SillyTavern/public/scripts/extensions/third-party/Pavago
+SillyTavern/public/scripts/extensions/third-party/Babel
 ```
 
 Then restart SillyTavern or reload the browser page.
 
 ## Notes
 
-Pavago keeps the original chat message in `message.mes` and stores translated output separately in message metadata.
+Babel keeps the original chat message in `message.mes` and stores translated output separately in message metadata.
 
-If you used an older Tavago test build, Pavago will try to migrate saved Tavago settings and message translation data automatically.
+If you used an older Pavago or Tavago test build, Babel will try to migrate saved settings and message translation data automatically.

@@ -1,78 +1,72 @@
-/* Pavago 설정창 전체 배치입니다. */
-#pavago_settings {
+/* Babel 설정창 전체 배치입니다. */
+#babel_settings {
     margin-bottom: 8px;
 }
 
 /* 설정창 제목 줄입니다. */
-.pavago-title {
+.babel-title {
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-.pavago-title-icon {
-    display: inline-block;
-    width: 1.1em;
-    height: 1.1em;
-    background-color: currentColor;
-    mask: url("icons/pavago-parrot.png") center / contain no-repeat;
-    -webkit-mask: url("icons/pavago-parrot.png") center / contain no-repeat;
+.babel-title-icon {
     pointer-events: none;
 }
 
-.pavago-grid {
+.babel-grid {
     display: grid;
     gap: 8px;
     margin-top: 8px;
 }
 
 /* 설정창 2단처럼 세 항목을 한 줄에 놓는 행입니다. */
-.pavago-grid-three {
+.babel-grid-three {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* 설정창 3-5단처럼 두 항목을 한 줄에 놓는 행입니다. */
-.pavago-grid-two {
+.babel-grid-two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.pavago-field {
+.babel-field {
     display: flex;
     flex-direction: column;
     gap: 4px;
     min-width: 0;
 }
 
-.pavago-field-full {
+.babel-field-full {
     margin-top: 8px;
 }
 
-.pavago-field-span {
+.babel-field-span {
     grid-column: 1 / -1;
 }
 
-.pavago-field-first {
+.babel-field-first {
     margin-top: 0;
 }
 
 /* 설정 라벨과 버튼 영역의 기본 간격입니다. */
-.pavago-label {
+.babel-label {
     font-weight: 600;
 }
 
-.pavago-help {
+.babel-help {
     display: block;
     margin-top: 8px;
     opacity: 0.8;
 }
 
-.pavago-field .text_pole {
+.babel-field .text_pole {
     width: 100%;
     min-width: 0;
 }
 
 /* 캐시 초기화 버튼은 아이콘과 문구가 모바일에서도 한 줄로 보이게 고정합니다. */
-.pavago-clear-cache-button {
+.babel-clear-cache-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -82,7 +76,7 @@
     white-space: nowrap;
 }
 
-#pavago_translate_input {
+#babel_translate_input {
     cursor: pointer;
     touch-action: manipulation;
     user-select: none;
@@ -91,45 +85,28 @@
 
 /* 메시지별 번역 버튼입니다.
    실제 모양, 크기, 위치, 기본 색상은 SillyTavern의 mes_button 스타일을 그대로 따릅니다.
-   여기서는 모바일 길게 누르기와 Pavago 상태 표시처럼 꼭 필요한 것만 추가합니다. */
-.pavago_translate_message {
+   여기서는 모바일 길게 누르기와 Babel 상태 표시처럼 꼭 필요한 것만 추가합니다. */
+.babel_translate_message {
     position: relative;
     touch-action: manipulation;
     user-select: none;
     -webkit-user-select: none;
 }
 
-/* 메시지 버튼 안의 앵무새 아이콘입니다.
-   PNG의 투명도를 마스크로 쓰고, 색상은 currentColor로 입혀 기존 아이콘 색을 따라갑니다. */
-.pavago-message-icon {
-    display: inline-block;
-    position: relative;
-    top: -0.12em;
-    width: 1.4em;
-    height: 1.4em;
-    background-color: currentColor;
-    mask: url("icons/pavago-parrot.png") center / contain no-repeat;
-    -webkit-mask: url("icons/pavago-parrot.png") center / contain no-repeat;
-    line-height: 1;
-    vertical-align: -0.125em;
-    pointer-events: none;
-}
-
 /* 번역 요청이 진행 중일 때의 상태입니다. */
-.pavago_translate_message.pavago-busy {
+.babel_translate_message.babel-busy {
     opacity: 0.6;
     pointer-events: none;
 }
 
 /* 번역 중일 때 새 아이콘에 적용되는 애니메이션입니다. */
-.pavago-busy i,
-.pavago-busy .pavago-message-icon,
-#pavago_translate_input.pavago-busy {
-    animation: pavago-busy-pulse 0.9s ease-in-out infinite;
+.babel-busy i,
+#babel_translate_input.babel-busy {
+    animation: babel-busy-pulse 0.9s ease-in-out infinite;
     transform-origin: center;
 }
 
-@keyframes pavago-busy-pulse {
+@keyframes babel-busy-pulse {
     0%,
     100% {
         opacity: 0.55;
