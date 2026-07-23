@@ -176,6 +176,44 @@ async function sendTranslationWithConnectionProfile(profileId, promptInfo, promp
     );
 }
 
+// API 호출 방식마다 반환 형태가 다를 수 있어서 번역 결과를 문자열로 통일합니다.
+// generateRaw()는 보통 문자열을 돌려주지만, ConnectionManagerRequestService는 프로필/API에 따라 객체를 돌려줄 수 있습니다.
+function normalizeTranslatedText(result) {
+    if (typeof result === "string") {
+        return result;
+    }
+
+    if (typeof result?.text === "string") {
+        return result.text;
+    }
+
+    if (typeof result?.content === "string") {
+        return result.content;
+    }
+
+    if (typeof result?.message?.content === "string") {
+        return result.message.content;
+    }
+
+    if (typeof result?.choices?.[0]?.message?.content === "string") {
+        return result.choices[0].message.content;
+    }
+
+    if (typeof result?.choices?.[0]?.text === "string") {
+        return result.choices[0].text;
+    }
+
+    if (typeof result?.output_text === "string") {
+        return result.output_text;
+    }
+
+    if (typeof result?.data === "string") {
+        return result.data;
+    }
+
+    throw new Error("번역 결과를 문자열로 읽지 못했습니다. API 연결 프로필의 반환 형식을 확인해야 합니다.");
+}
+
 // SillyTavern에 저장된 Pavago 설정을 읽습니다.
 // 빠진 값이 있으면 위의 기본 설정으로 채워줍니다.
 function getSettings() {
@@ -886,13 +924,14 @@ async function translateText(text, targetLanguageCode, translationType = "messag
         throw new Error("현재 SillyTavern에서 generateRaw()를 찾을 수 없습니다.");
     }
 
-    const translatedText = await enqueueTranslationTask(() => {
+    const translationResult = await enqueueTranslationTask(() => {
         if (selectedProfileId) {
             return sendTranslationWithConnectionProfile(selectedProfileId, promptInfo, promptText);
         }
 
         return context.generateRaw(buildGenerateRawOptions(promptInfo, promptText));
     });
+    const translatedText = normalizeTranslatedText(translationResult);
 
     return {
         text: translatedText,
