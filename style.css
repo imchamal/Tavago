@@ -45,21 +45,9 @@
 }
 
 /* 메시지별 번역 버튼입니다.
-   SillyTavern의 기존 아이콘 줄과 섞이도록 배경과 테두리를 없앴습니다. */
+   실제 모양, 크기, 위치, 기본 색상은 SillyTavern의 mes_button 스타일을 그대로 따릅니다.
+   여기서는 모바일 길게 누르기와 Tavago 상태 표시처럼 꼭 필요한 것만 추가합니다. */
 .tavago_translate_message {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: auto;
-    min-width: 0;
-    height: auto;
-    padding: 0;
-    margin: 0 3px;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    color: inherit;
-    cursor: pointer;
     touch-action: manipulation;
     user-select: none;
     -webkit-user-select: none;
@@ -69,10 +57,6 @@
 .tavago_translate_message.tavago-busy {
     opacity: 0.6;
     pointer-events: none;
-}
-
-.tavago_translate_message.tavago-active {
-    color: var(--SmartThemeQuoteColor);
 }
 
 .tavago_translate_message.tavago-outdated {
@@ -85,7 +69,8 @@
 
 /* 번역 중일 때 새 아이콘에 적용되는 애니메이션입니다. */
 .tavago-busy i,
-#tavago_translate_input.tavago-busy {
+#tavago_translate_input.tavago-busy,
+.tavago_translate_message.tavago-busy {
     animation: tavago-busy-pulse 0.9s ease-in-out infinite;
     transform-origin: center;
 }

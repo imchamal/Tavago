@@ -776,13 +776,9 @@ async function autoTranslateMessage(messageBlock) {
 }
 
 // 메시지 안에 있는 기존 SillyTavern 아이콘 버튼 영역을 찾습니다.
-// 버튼 영역을 못 찾으면 임시로 메시지 전체 영역에 버튼을 붙입니다.
-function findMessageButtonContainer(messageBlock) {
-    return (
-        messageBlock.querySelector(".extraMesButtons") ||
-        messageBlock.querySelector(".mes_buttons") ||
-        messageBlock
-    );
+// Tavago 버튼은 펼쳐지는 extraMesButtons가 아니라 연필 아이콘 왼쪽 고정 영역에 넣습니다.
+function findMessageButtonAnchor(messageBlock) {
+    return messageBlock.querySelector(".mes_edit");
 }
 
 // 채팅 메시지 하나에 Tavago 아이콘 버튼을 추가합니다.
@@ -802,10 +798,14 @@ function addTranslateButtonToMessage(messageBlock) {
         return;
     }
 
+    const editButton = findMessageButtonAnchor(messageBlock);
+
+    if (!editButton || !editButton.parentElement) {
+        return;
+    }
+
     const button = $(`
-        <button class="${messageButtonClass} mes_button" title="Tavago로 이 메시지 번역">
-            <i class="${tavagoIconClass}"></i>
-        </button>
+        <div class="${messageButtonClass} mes_button ${tavagoIconClass}" title="Tavago로 이 메시지 번역"></div>
     `);
     let longPressTimer = null;
     let longPressHandled = false;
@@ -853,7 +853,7 @@ function addTranslateButtonToMessage(messageBlock) {
         updateMessageButtonState(message, button);
     }
 
-    findMessageButtonContainer(messageBlock).append(button[0]);
+    editButton.parentElement.insertBefore(button[0], editButton);
 }
 
 // 화면에 보이는 모든 채팅 메시지에 Tavago 버튼을 붙입니다.
