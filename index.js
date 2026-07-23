@@ -18,26 +18,6 @@ const autoTranslateDelayMs = 1500;
 const seenMessageIds = new Set();
 let inputTranslationState = null;
 
-// 메시지 번역 버튼에 사용할 Tavago 전용 앵무새 SVG입니다.
-// fill="currentColor"라서 SillyTavern의 기존 아이콘 색상과 상태 색상을 그대로 따라갑니다.
-const messageIconSvg = `
-    <svg class="tavago-message-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-        <defs>
-            <mask id="tavago-parrot-mask" maskUnits="userSpaceOnUse">
-                <rect width="64" height="64" fill="white"/>
-                <ellipse cx="40.5" cy="27.6" rx="2.8" ry="3.6" fill="black"/>
-                <path d="M56.5 28.9C49.7 29.3 43.7 33.4 40.5 39.5C38.6 43.1 38.2 47.4 39.9 51.8" fill="none" stroke="black" stroke-width="5.2" stroke-linecap="round"/>
-                <path d="M42.4 42.1C46.6 42.6 50 45.3 51.5 49.6H46.1C42.5 49.6 39.9 47.8 39.9 45.2C39.9 43.2 40.9 41.9 42.4 42.1Z" fill="black"/>
-            </mask>
-        </defs>
-        <g mask="url(#tavago-parrot-mask)">
-            <path d="M14 59V33.5C14 23.5 22 15 33.5 12.3C43.7 9.9 53.9 14.2 58.9 23.2C60.5 26.1 59.5 28.9 56.6 29.7C61.2 32.4 63.5 37.7 62 44.1C60.5 51 55.5 56.2 48.5 58.1C50.5 51.8 50.1 45.5 47.2 40.6C46 38.6 44.3 37 42.4 36C38.7 39.5 37.1 43.9 38.1 49.2C38.7 52.5 40.1 55.8 41.9 59H14Z"/>
-            <path d="M18.2 29.2C12 28.8 7 25.6 4.3 20.4C11.2 20.8 16.3 23.3 20 27.1C19.3 27.7 18.7 28.4 18.2 29.2Z"/>
-            <path d="M23 21.3C18.1 17.5 16 11.9 17.6 6.2C23.5 9.5 27.2 14 28.4 18.7C26.5 19.4 24.7 20.2 23 21.3Z"/>
-        </g>
-    </svg>
-`;
-
 // 처음 실행할 때 사용할 기본 설정입니다.
 // 이미 저장된 설정이 있으면 getSettings()에서 이 값들과 합쳐집니다.
 const defaultSettings = {
@@ -826,7 +806,7 @@ function addTranslateButtonToMessage(messageBlock) {
 
     const button = $(`
         <div class="${messageButtonClass} mes_button" title="Tavago로 이 메시지 번역">
-            ${messageIconSvg}
+            <span class="tavago-message-icon"></span>
         </div>
     `);
     let longPressTimer = null;
