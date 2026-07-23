@@ -34,6 +34,9 @@ const defaultSettings = {
     connectionProfile: "",
     inputEditMode: "manual",
     translationStyle: "normal",
+    temperature: 0.3,
+    maxTokens: 1000,
+    contextMessageCount: 0,
     customPrompt: "",
     systemPrompt: [
         "You are Tavago, a precise translation engine for SillyTavern chats.",
@@ -80,6 +83,59 @@ function normalizeTranslationStyle(value) {
     }
 
     return "normal";
+}
+
+// 숫자 설정은 사용자가 직접 입력할 수 있어서 허용 범위 안으로 정리합니다.
+function normalizeNumberSetting(value, fallback, min, max, allowDecimal = false) {
+    const parsedValue = allowDecimal ? Number.parseFloat(value) : Number.parseInt(value, 10);
+
+    if (!Number.isFinite(parsedValue)) {
+        return fallback;
+    }
+
+    const clampedValue = Math.min(max, Math.max(min, parsedValue));
+
+    return allowDecimal ? Number(clampedValue.toFixed(2)) : clampedValue;
+}
+
+// 현재 설정에서 API 생성 옵션으로 넘길 값을 만듭니다.
+function getGenerationOptions() {
+    const settings = getSettings();
+
+    return {
+        temperature: normalizeNumberSetting(settings.temperature, defaultSettings.temperature, 0, 2, true),
+        maxTokens: normalizeNumberSetting(settings.maxTokens, defaultSettings.maxTokens, 100, 8000),
+        contextMessageCount: normalizeNumberSetting(settings.contextMessageCount, defaultSettings.contextMessageCount, 0, 20),
+    };
+}
+
+// 번역 저장값과 현재 생성 설정을 비교할 때 쓰는 안정적인 문자열입니다.
+function getGenerationSettingsKey(includeContext = true) {
+    const options = getGenerationOptions();
+    const parts = [
+        `temperature:${options.temperature}`,
+        `maxTokens:${options.maxTokens}`,
+    ];
+
+    if (includeContext) {
+        parts.push(`context:${options.contextMessageCount}`);
+    }
+
+    return parts.join("|");
+}
+
+// SillyTavern generateRaw()에 넘길 생성 옵션입니다.
+// 버전에 따라 일부 키를 무시할 수 있으므로, Tavago 쪽에서는 같은 값을 저장해 상태 비교에 사용합니다.
+function buildGenerateRawOptions(promptInfo, promptText) {
+    const options = getGenerationOptions();
+
+    return {
+        systemPrompt: promptInfo.systemPrompt,
+        prompt: promptText,
+        temperature: options.temperature,
+        max_tokens: options.maxTokens,
+        maxTokens: options.maxTokens,
+    };
 }
 
 // SillyTavern에 저장된 Tavago 설정을 읽습니다.
@@ -278,11 +334,18 @@ function getValidInputTranslationState(currentText) {
         return null;
     }
 
-    if (
-        currentText === inputTranslationState.originalText ||
-        currentText === inputTranslationState.translatedText
-    ) {
-        return inputTranslationState;
+    if (currentText === inputTranslationState.originalText || currentText === inputTranslationState.translatedText) {
+        const promptInfo = buildTranslationPrompt(getInputTargetLanguageCode(), "input");
+        const isSameSettings = (
+            inputTranslationState.targetLanguage === promptInfo.targetLanguage &&
+            inputTranslationState.promptUsed === promptInfo.systemPrompt &&
+            inputTranslationState.generationSettings === getGenerationSettingsKey(false) &&
+            normalizeConnectionProfileName(inputTranslationState.connectionProfile) === normalizeConnectionProfileName(getSettings().connectionProfile)
+        );
+
+        if (isSameSettings) {
+            return inputTranslationState;
+        }
     }
 
     inputTranslationState = null;
@@ -351,6 +414,57 @@ function getMessageIdFromBlock(messageBlock) {
     return Number.isInteger(parsedId) ? parsedId : null;
 }
 
+// 문맥에 너무 긴 메시지가 들어가면 번역 요청이 무거워지므로 적당히 줄입니다.
+// 문맥은 참고용일 뿐이고, 실제 번역 대상은 별도로 전달됩니다.
+function truncateContextMessage(text) {
+    const normalizedText = String(text || "").trim();
+    const maxLength = 1200;
+
+    if (normalizedText.length <= maxLength) {
+        return normalizedText;
+    }
+
+    return `${normalizedText.slice(0, maxLength)}...`;
+}
+
+// 이전 메시지 N개를 번역 참고용 문맥으로 만듭니다.
+// display_text가 아니라 원문 mes를 써서 이미 번역된 내용이 다시 문맥에 섞이지 않게 합니다.
+function buildPreviousMessageContext(messageId) {
+    const options = getGenerationOptions();
+    const context = getContext();
+
+    if (!options.contextMessageCount || !Array.isArray(context.chat) || messageId === null) {
+        return "";
+    }
+
+    const startIndex = Math.max(0, messageId - options.contextMessageCount);
+
+    return context.chat
+        .slice(startIndex, messageId)
+        .filter((message) => message?.mes)
+        .map((message) => {
+            const speakerName = message.name || (message.is_user ? "User" : "AI");
+            return `${speakerName}: ${truncateContextMessage(message.mes)}`;
+        })
+        .join("\n\n");
+}
+
+// 문맥이 있을 때는 문맥과 실제 번역 대상을 명확히 분리합니다.
+// 모델이 문맥까지 번역해서 출력하는 일을 막기 위한 구조입니다.
+function buildPromptWithContext(targetText, contextText) {
+    if (!contextText) {
+        return targetText;
+    }
+
+    return [
+        "Reference context only. Do not translate or output this context:",
+        contextText,
+        "",
+        "Translate only the target text below. Return only the translated target text:",
+        targetText,
+    ].join("\n");
+}
+
 // 메시지 안에 Tavago 전용 저장 공간을 준비합니다.
 // 이전 테스트 버전에서 display_text에만 저장한 번역문도 여기로 옮겨 둡니다.
 function getTavagoData(message) {
@@ -414,6 +528,7 @@ function isTranslationOutdated(message) {
     return (
         tavagoData.target_language !== promptInfo.targetLanguage ||
         tavagoData.prompt_used !== promptInfo.systemPrompt ||
+        tavagoData.generation_settings !== getGenerationSettingsKey() ||
         normalizeConnectionProfileName(tavagoData.connection_profile) !== normalizeConnectionProfileName(getSettings().connectionProfile)
     );
 }
@@ -674,25 +789,24 @@ function buildTranslationPrompt(targetLanguageCode, translationType = "message")
 
 // 현재 SillyTavern에 연결된 API/모델에게 번역을 요청합니다.
 // Tavago는 별도 API 키를 받지 않고 generateRaw()를 사용합니다.
-async function translateText(text, targetLanguageCode, translationType = "message") {
+async function translateText(text, targetLanguageCode, translationType = "message", contextText = "") {
     const context = getContext();
     const promptInfo = buildTranslationPrompt(targetLanguageCode, translationType);
+    const promptText = buildPromptWithContext(text, contextText);
 
     if (typeof context.generateRaw !== "function") {
         throw new Error("현재 SillyTavern에서 generateRaw()를 찾을 수 없습니다.");
     }
 
     const translatedText = await enqueueTranslationTask(() => runWithSelectedConnectionProfile(() => (
-        context.generateRaw({
-            systemPrompt: promptInfo.systemPrompt,
-            prompt: text,
-        })
+        context.generateRaw(buildGenerateRawOptions(promptInfo, promptText))
     )));
 
     return {
         text: translatedText,
         targetLanguage: promptInfo.targetLanguage,
         promptUsed: promptInfo.systemPrompt,
+        generationSettings: getGenerationSettingsKey(translationType === "message"),
         connectionProfile: normalizeConnectionProfileName(getSettings().connectionProfile),
     };
 }
@@ -748,6 +862,7 @@ async function translateInputTextarea(forceRetranslate = false) {
             showingTranslation: true,
             targetLanguage: result.targetLanguage,
             promptUsed: result.promptUsed,
+            generationSettings: result.generationSettings,
             connectionProfile: result.connectionProfile,
             translatedAt: Date.now(),
         };
@@ -811,7 +926,7 @@ async function retranslateInputTextarea() {
 
 // 메시지를 새로 번역해서 Tavago 저장 공간에 넣습니다.
 // forceRetranslate가 true면 기존 번역문이 있어도 API에 다시 요청합니다.
-async function translateAndSaveMessage(message, forceRetranslate = false) {
+async function translateAndSaveMessage(message, forceRetranslate = false, messageId = null) {
     const tavagoData = getTavagoData(message);
 
     if (tavagoData.translated_text && !forceRetranslate) {
@@ -819,10 +934,12 @@ async function translateAndSaveMessage(message, forceRetranslate = false) {
         return false;
     }
 
-    const result = await translateText(message.mes, getMessageTargetLanguageCode(), "message");
+    const contextText = buildPreviousMessageContext(messageId);
+    const result = await translateText(message.mes, getMessageTargetLanguageCode(), "message", contextText);
     tavagoData.translated_text = result.text.trim();
     tavagoData.target_language = result.targetLanguage;
     tavagoData.prompt_used = result.promptUsed;
+    tavagoData.generation_settings = result.generationSettings;
     tavagoData.connection_profile = result.connectionProfile;
     tavagoData.translated_at = Date.now();
     clearTranslationFailed(message);
@@ -853,7 +970,7 @@ async function toggleMessageTranslation(messageBlock, button) {
             }
 
             startedTranslation = true;
-            await translateAndSaveMessage(message);
+            await translateAndSaveMessage(message, false, messageId);
             finishMessageTranslation(message, button);
             startedTranslation = false;
             showInfo("메시지 번역이 완료되었습니다.");
@@ -906,7 +1023,7 @@ async function retranslateMessage(messageBlock, button) {
     startedTranslation = true;
 
     try {
-        await translateAndSaveMessage(message, true);
+        await translateAndSaveMessage(message, true, messageId);
         finishMessageTranslation(message, button);
         startedTranslation = false;
         await refreshMessageAndSave(context, messageId, message);
@@ -978,7 +1095,7 @@ async function autoTranslateMessage(messageBlock) {
         startedTranslation = true;
 
         try {
-            await translateAndSaveMessage(latestMessage);
+            await translateAndSaveMessage(latestMessage, false, messageId);
             latestTavagoData.auto_translate_started = false;
             finishMessageTranslation(latestMessage, button);
             startedTranslation = false;
@@ -1158,6 +1275,9 @@ function loadSettingsToUi() {
     $("#tavago_dual_line_mode").val(settings.dualLineMode ? "on" : "off");
     $("#tavago_input_edit_mode").val(settings.inputEditMode);
     $("#tavago_translation_style").val(normalizeTranslationStyle(settings.translationStyle));
+    $("#tavago_temperature").val(getGenerationOptions().temperature);
+    $("#tavago_max_tokens").val(getGenerationOptions().maxTokens);
+    $("#tavago_context_message_count").val(getGenerationOptions().contextMessageCount);
     $("#tavago_custom_prompt").val(settings.customPrompt);
 }
 
@@ -1198,6 +1318,21 @@ function bindSettingsEvents() {
 
     $("#tavago_translation_style").on("change", function () {
         getSettings().translationStyle = normalizeTranslationStyle($(this).val());
+        saveSettingsDebounced();
+    });
+
+    $("#tavago_temperature").on("input", function () {
+        getSettings().temperature = normalizeNumberSetting($(this).val(), defaultSettings.temperature, 0, 2, true);
+        saveSettingsDebounced();
+    });
+
+    $("#tavago_max_tokens").on("input", function () {
+        getSettings().maxTokens = normalizeNumberSetting($(this).val(), defaultSettings.maxTokens, 100, 8000);
+        saveSettingsDebounced();
+    });
+
+    $("#tavago_context_message_count").on("input", function () {
+        getSettings().contextMessageCount = normalizeNumberSetting($(this).val(), defaultSettings.contextMessageCount, 0, 20);
         saveSettingsDebounced();
     });
 

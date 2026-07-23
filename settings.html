@@ -89,6 +89,30 @@
                         <option value="natural">번역체 탈피</option>
                     </select>
                 </div>
+
+                <div class="tavago-field">
+                    <!-- 낮을수록 안정적이고, 높을수록 표현이 다양해집니다. -->
+                    <label class="tavago-label" for="tavago_temperature">
+                        온도
+                    </label>
+                    <input id="tavago_temperature" class="text_pole" type="number" min="0" max="2" step="0.1">
+                </div>
+
+                <div class="tavago-field">
+                    <!-- 번역 결과가 길 때 잘리지 않도록 최대 출력량을 정합니다. -->
+                    <label class="tavago-label" for="tavago_max_tokens">
+                        토큰
+                    </label>
+                    <input id="tavago_max_tokens" class="text_pole" type="number" min="100" max="8000" step="100">
+                </div>
+
+                <div class="tavago-field tavago-field-span">
+                    <!-- 현재 메시지 앞의 몇 개 메시지를 참고용 문맥으로 함께 보낼지 정합니다. -->
+                    <label class="tavago-label" for="tavago_context_message_count">
+                        문맥
+                    </label>
+                    <input id="tavago_context_message_count" class="text_pole" type="number" min="0" max="20" step="1">
+                </div>
             </div>
 
             <div class="tavago-field tavago-field-full">
