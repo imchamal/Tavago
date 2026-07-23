@@ -1261,10 +1261,15 @@ async function autoTranslateMessage(messageBlock) {
     }, autoTranslateDelayMs);
 }
 
-// 메시지 안에 있는 기존 SillyTavern 아이콘 버튼 영역을 찾습니다.
-// Babel 버튼은 펼쳐지는 extraMesButtons가 아니라 연필 아이콘 왼쪽 고정 영역에 넣습니다.
-function findMessageButtonAnchor(messageBlock) {
-    return messageBlock.querySelector(".mes_edit");
+// 메시지 안에서 펼쳐지는 액션 버튼 묶음을 찾습니다.
+// 테마나 SillyTavern 버전에 따라 클래스가 다를 수 있어서 여러 후보를 순서대로 확인합니다.
+function findMessageActionButtonsContainer(messageBlock) {
+    return (
+        messageBlock.querySelector(".extraMesButtons") ||
+        messageBlock.querySelector(".extra_mes_buttons") ||
+        messageBlock.querySelector(".mes_extra_buttons") ||
+        messageBlock.querySelector(".mes_buttons")
+    );
 }
 
 // 채팅 메시지 하나에 Babel 아이콘 버튼을 추가합니다.
@@ -1284,9 +1289,9 @@ function addTranslateButtonToMessage(messageBlock) {
         return;
     }
 
-    const editButton = findMessageButtonAnchor(messageBlock);
+    const buttonsContainer = findMessageActionButtonsContainer(messageBlock);
 
-    if (!editButton || !editButton.parentElement) {
+    if (!buttonsContainer) {
         return;
     }
 
@@ -1341,7 +1346,7 @@ function addTranslateButtonToMessage(messageBlock) {
         updateMessageButtonState(message, button);
     }
 
-    editButton.parentElement.insertBefore(button[0], editButton);
+    buttonsContainer.appendChild(button[0]);
 }
 
 // 화면에 보이는 모든 채팅 메시지에 Babel 버튼을 붙입니다.
