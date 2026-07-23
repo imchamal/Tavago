@@ -479,6 +479,11 @@ function getTavagoData(message) {
     return message.extra.tavago;
 }
 
+// 버튼 상태 확인처럼 읽기만 필요한 곳에서는 빈 Tavago 데이터를 새로 만들지 않습니다.
+function getExistingTavagoData(message) {
+    return message?.extra?.tavago || {};
+}
+
 // 자동 번역 설정값에 따라 이 메시지를 자동 번역할지 판단합니다.
 // off: 자동 번역 안 함, all: 전체, user: 유저 메시지만, ai: AI 메시지만
 function shouldAutoTranslateMessage(message) {
@@ -517,7 +522,7 @@ function hasSavedTranslation(message) {
 // 저장된 번역문이 현재 메시지 번역 설정과 다른지 확인합니다.
 // 목표 언어나 번역 지시문이 바뀌었으면 true가 됩니다.
 function isTranslationOutdated(message) {
-    const tavagoData = getTavagoData(message);
+    const tavagoData = getExistingTavagoData(message);
 
     if (!tavagoData.translated_text) {
         return false;
@@ -531,6 +536,72 @@ function isTranslationOutdated(message) {
         tavagoData.generation_settings !== getGenerationSettingsKey() ||
         normalizeConnectionProfileName(tavagoData.connection_profile) !== normalizeConnectionProfileName(getSettings().connectionProfile)
     );
+}
+
+// 메시지 하나에서 Tavago가 저장한 번역 캐시만 삭제합니다.
+// 원문 message.mes와 다른 확장 설정은 건드리지 않습니다.
+function clearTavagoDataFromMessage(message) {
+    if (!message?.extra) {
+        return false;
+    }
+
+    const hadTavagoData = Boolean(message.extra.tavago);
+    const hadDisplayText = Boolean(message.extra.display_text);
+
+    if (hadTavagoData) {
+        delete message.extra.tavago;
+    }
+
+    // Tavago 번역문이 화면에 표시 중이면 원문으로 돌아가야 하므로 display_text도 지웁니다.
+    // Tavago 데이터가 없는 메시지는 다른 기능의 display_text일 수 있어 건드리지 않습니다.
+    if (hadTavagoData && hadDisplayText) {
+        delete message.extra.display_text;
+    }
+
+    return hadTavagoData;
+}
+
+// 현재 채팅 전체에서 Tavago 번역 캐시를 삭제하고 화면과 저장 파일을 갱신합니다.
+async function clearCurrentChatTranslations() {
+    const context = getContext();
+
+    if (!Array.isArray(context.chat) || !context.chat.length) {
+        showInfo("초기화할 채팅 메시지가 없습니다.");
+        return;
+    }
+
+    const confirmed = window.confirm("현재 채팅의 Tavago 번역을 모두 삭제할까요?");
+
+    if (!confirmed) {
+        return;
+    }
+
+    let clearedCount = 0;
+
+    context.chat.forEach((message, messageId) => {
+        if (!clearTavagoDataFromMessage(message)) {
+            return;
+        }
+
+        clearedCount += 1;
+
+        if (typeof context.updateMessageBlock === "function") {
+            context.updateMessageBlock(messageId, message);
+        }
+    });
+
+    if (!clearedCount) {
+        showInfo("삭제할 Tavago 번역이 없습니다.");
+        return;
+    }
+
+    if (typeof context.saveChat === "function") {
+        await context.saveChat();
+    }
+
+    inputTranslationState = null;
+    addTranslateButtonsToMessages();
+    showInfo(`Tavago 번역 ${clearedCount}개를 초기화했습니다.`);
 }
 
 // 번역 실패 정보를 메시지의 Tavago 저장 공간에 남깁니다.
@@ -582,7 +653,7 @@ async function refreshMessageAndSave(context, messageId, message) {
 
 // 버튼의 툴팁과 활성 표시를 현재 메시지 상태에 맞게 바꿉니다.
 function updateMessageButtonState(message, button) {
-    const tavagoData = getTavagoData(message);
+    const tavagoData = getExistingTavagoData(message);
     const isShowingTranslation = Boolean(tavagoData.showing_translation);
     const isOutdated = isTranslationOutdated(message);
     const hasError = Boolean(tavagoData.auto_translate_failed);
@@ -1339,6 +1410,10 @@ function bindSettingsEvents() {
     $("#tavago_custom_prompt").on("input", function () {
         getSettings().customPrompt = String($(this).val() || "");
         saveSettingsDebounced();
+    });
+
+    $("#tavago_clear_chat_translations").on("click", async function () {
+        await clearCurrentChatTranslations();
     });
 }
 
