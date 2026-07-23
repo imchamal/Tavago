@@ -61,11 +61,11 @@
    PNG의 투명도를 마스크로 쓰고, 색상은 currentColor로 입혀 기존 아이콘 색을 따라갑니다. */
 .tavago-message-icon {
     display: block;
-    width: 1.35em;
-    height: 1.35em;
+    width: 1.45em;
+    height: 1.45em;
     background-color: currentColor;
-    mask: url("icons/tavago-parrot.png") center / contain no-repeat;
-    -webkit-mask: url("icons/tavago-parrot.png") center / contain no-repeat;
+    mask: url("icons/tavago-parrot-small.png") center / contain no-repeat;
+    -webkit-mask: url("icons/tavago-parrot-small.png") center / contain no-repeat;
     line-height: 1;
     pointer-events: none;
 }
