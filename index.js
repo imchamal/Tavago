@@ -141,6 +141,11 @@ function buildGenerateRawOptions(promptInfo, promptText) {
 // SillyTavern에 저장된 Pavago 설정을 읽습니다.
 // 빠진 값이 있으면 위의 기본 설정으로 채워줍니다.
 function getSettings() {
+    // 이름 변경 전 테스트 버전의 설정이 있으면 Pavago 설정으로 한 번 가져옵니다.
+    if (!extension_settings[extensionName] && extension_settings.Tavago) {
+        extension_settings[extensionName] = Object.assign({}, extension_settings.Tavago);
+    }
+
     const savedSettings = extension_settings[extensionName] || {};
 
     if (savedSettings.messageTargetLanguage && !savedSettings.targetLanguage) {
@@ -469,6 +474,13 @@ function buildPromptWithContext(targetText, contextText) {
 // 이전 테스트 버전에서 display_text에만 저장한 번역문도 여기로 옮겨 둡니다.
 function getPavagoData(message) {
     message.extra = message.extra || {};
+
+    // 이름 변경 전 저장된 메시지 번역 데이터가 있으면 Pavago 저장 공간으로 옮깁니다.
+    if (!message.extra.pavago && message.extra.tavago) {
+        message.extra.pavago = Object.assign({}, message.extra.tavago);
+        delete message.extra.tavago;
+    }
+
     message.extra.pavago = message.extra.pavago || {};
 
     if (message.extra.display_text && !message.extra.pavago.translated_text) {

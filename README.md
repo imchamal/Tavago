@@ -1,28 +1,25 @@
 # Pavago
 
-Pavago is a minimal SillyTavern translation extension test.
+Pavago is a SillyTavern translation extension that uses the currently selected SillyTavern API connection.
 
-## Current test feature
+## Features
 
-- Adds a Pavago settings panel.
-- Uses a Font Awesome icon instead of a PNG icon file.
-- Uses the current SillyTavern API connection through `generateRaw()`.
-- Adds an input translation icon next to the SillyTavern send button.
-- Short press on the input icon translates or toggles original/translation.
-- Long press on the input icon retranslates the input text.
+- Translates user messages, AI messages, and unsent input text.
+- Adds a translate/toggle button next to chat messages.
+- Adds an input translation button next to the send button.
+- Short press toggles between original and translation.
+- Long press retranslates from the original text.
 - Supports Korean/English bidirectional input translation.
-- Uses a single target language for message reading.
-- Adds a Pavago translate button to chat messages.
-- Short press on a message button toggles original/translation.
-- Long press on a message button retranslates the message.
-- Auto-translates new messages by selected target: off, both, user only, or AI only.
-- Prevents duplicate translation requests on the same message while a translation is already running.
-- Stores the target language, prompt, and timestamp used for each saved message translation.
-- Marks saved message translations as outdated when they no longer match the current message translation settings.
-- Stores translation failure details and marks failed message buttons with an error color.
-- Supports optional dual-line display for selected dialogue-like segments as `original [translation]`.
+- Supports automatic translation for both messages, user messages only, or AI messages only.
+- Lets you choose a SillyTavern API connection profile for translation.
+- Saves translated chat messages without replacing the original message text.
+- Marks saved translations as outdated when translation settings change.
+- Stores translation failure details and shows failed messages with an error state.
+- Supports optional `original [translation]` display for double-quoted and backticked text.
+- Supports translation style, temperature, max tokens, and previous-message context settings.
+- Includes a current-chat translation cache reset button.
 
-## Install for testing
+## Installation
 
 Place this folder here:
 
@@ -34,4 +31,6 @@ Then restart SillyTavern or reload the browser page.
 
 ## Notes
 
-Saved chat message translations keep the original message text and only change the display text.
+Pavago keeps the original chat message in `message.mes` and stores translated output separately in message metadata.
+
+If you used an older Tavago test build, Pavago will try to migrate saved Tavago settings and message translation data automatically.
