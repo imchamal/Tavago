@@ -17,6 +17,7 @@ const inputIconClass = "fa-solid fa-feather-pointed";
 const longPressMs = 650;
 const autoTranslateDelayMs = 1500;
 const seenMessageIds = new Set();
+let initialChatScanDone = false;
 let translationQueue = Promise.resolve();
 let inputTranslationState = null;
 
@@ -961,6 +962,8 @@ function addTranslateButtonToMessage(messageBlock) {
 // 화면에 보이는 모든 채팅 메시지에 Tavago 버튼을 붙입니다.
 // allowAutoTranslate가 true일 때만 새 메시지 자동 번역도 같이 확인합니다.
 function addTranslateButtonsToMessages(allowAutoTranslate = false) {
+    const shouldCheckAutoTranslate = allowAutoTranslate && initialChatScanDone;
+
     document.querySelectorAll("#chat .mes").forEach((messageBlock) => {
         const messageId = getMessageIdFromBlock(messageBlock);
         const context = getContext();
@@ -974,10 +977,12 @@ function addTranslateButtonsToMessages(allowAutoTranslate = false) {
             seenMessageIds.add(messageId);
         }
 
-        if (allowAutoTranslate && isNewMessage) {
+        if (shouldCheckAutoTranslate && isNewMessage) {
             autoTranslateMessage(messageBlock);
         }
     });
+
+    initialChatScanDone = true;
 }
 
 // 채팅 영역을 감시합니다.
