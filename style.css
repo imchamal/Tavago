@@ -49,9 +49,6 @@
    여기서는 모바일 길게 누르기와 Tavago 상태 표시처럼 꼭 필요한 것만 추가합니다. */
 .tavago_translate_message {
     position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     touch-action: manipulation;
     user-select: none;
     -webkit-user-select: none;
@@ -60,13 +57,16 @@
 /* 메시지 버튼 안의 앵무새 아이콘입니다.
    PNG의 투명도를 마스크로 쓰고, 색상은 currentColor로 입혀 기존 아이콘 색을 따라갑니다. */
 .tavago-message-icon {
-    display: block;
+    display: inline-block;
+    position: relative;
+    top: -0.08em;
     width: 1.4em;
     height: 1.4em;
     background-color: currentColor;
     mask: url("icons/tavago-parrot.png") center / contain no-repeat;
     -webkit-mask: url("icons/tavago-parrot.png") center / contain no-repeat;
     line-height: 1;
+    vertical-align: -0.125em;
     pointer-events: none;
 }
 
