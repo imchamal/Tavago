@@ -68,6 +68,10 @@
     color: var(--warning-color, #d6a300);
 }
 
+.tavago_translate_message.tavago-error {
+    color: var(--error-color, #d9534f);
+}
+
 /* 번역 중일 때 새 아이콘에 적용되는 애니메이션입니다. */
 .tavago-busy i,
 #tavago_translate_input.tavago-busy {

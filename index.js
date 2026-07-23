@@ -11,6 +11,7 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const messageButtonClass = "tavago_translate_message";
 const activeButtonClass = "tavago-active";
 const outdatedButtonClass = "tavago-outdated";
+const errorButtonClass = "tavago-error";
 const tavagoIconClass = "fa-solid fa-crow";
 const longPressMs = 650;
 const autoTranslateDelayMs = 1500;
@@ -155,6 +156,25 @@ function isTranslationOutdated(message) {
     );
 }
 
+// 번역 실패 정보를 메시지의 Tavago 저장 공간에 남깁니다.
+function markTranslationFailed(message, error) {
+    const tavagoData = getTavagoData(message);
+    const errorMessage = error?.message || String(error) || "번역 중 오류가 발생했습니다.";
+
+    tavagoData.auto_translate_failed = true;
+    tavagoData.last_error = errorMessage;
+    tavagoData.last_error_at = Date.now();
+}
+
+// 번역이 성공하면 이전 실패 정보를 지웁니다.
+function clearTranslationFailed(message) {
+    const tavagoData = getTavagoData(message);
+
+    tavagoData.auto_translate_failed = false;
+    delete tavagoData.last_error;
+    delete tavagoData.last_error_at;
+}
+
 // 저장된 번역문을 화면에 보여줍니다.
 function showTranslation(message) {
     const tavagoData = getTavagoData(message);
@@ -188,11 +208,15 @@ function updateMessageButtonState(message, button) {
     const tavagoData = getTavagoData(message);
     const isShowingTranslation = Boolean(tavagoData.showing_translation);
     const isOutdated = isTranslationOutdated(message);
+    const hasError = Boolean(tavagoData.auto_translate_failed);
 
     button.toggleClass(activeButtonClass, isShowingTranslation);
     button.toggleClass(outdatedButtonClass, isOutdated);
+    button.toggleClass(errorButtonClass, hasError);
 
-    if (!tavagoData.translated_text) {
+    if (hasError) {
+        button.attr("title", `최근 번역 실패: ${tavagoData.last_error || "오류 정보 없음"}. 길게 누르면 재번역`);
+    } else if (!tavagoData.translated_text) {
         button.attr("title", "Tavago로 이 메시지 번역");
     } else if (isOutdated) {
         button.attr("title", "현재 메시지 번역 설정과 다른 번역입니다. 길게 누르면 재번역");
@@ -353,6 +377,7 @@ async function translateAndSaveMessage(message, forceRetranslate = false) {
     tavagoData.target_language = result.targetLanguage;
     tavagoData.prompt_used = result.promptUsed;
     tavagoData.translated_at = Date.now();
+    clearTranslationFailed(message);
     showTranslation(message);
 
     return true;
@@ -393,6 +418,13 @@ async function toggleMessageTranslation(messageBlock, button) {
         updateMessageButtonState(message, button);
         await refreshMessageAndSave(context, messageId, message);
     } catch (error) {
+        markTranslationFailed(message, error);
+        if (startedTranslation) {
+            finishMessageTranslation(message, button);
+            startedTranslation = false;
+        }
+
+        await refreshMessageAndSave(context, messageId, message);
         console.error(error);
         showError(error.message || "메시지 번역 중 오류가 발생했습니다.");
     } finally {
@@ -432,6 +464,13 @@ async function retranslateMessage(messageBlock, button) {
         await refreshMessageAndSave(context, messageId, message);
         showInfo("메시지 재번역이 완료되었습니다.");
     } catch (error) {
+        markTranslationFailed(message, error);
+        if (startedTranslation) {
+            finishMessageTranslation(message, button);
+            startedTranslation = false;
+        }
+
+        await refreshMessageAndSave(context, messageId, message);
         console.error(error);
         showError(error.message || "메시지 재번역 중 오류가 발생했습니다.");
     } finally {
@@ -495,6 +534,13 @@ async function autoTranslateMessage(messageBlock) {
             await refreshMessageAndSave(latestContext, messageId, latestMessage);
         } catch (error) {
             latestTavagoData.auto_translate_started = false;
+            markTranslationFailed(latestMessage, error);
+            if (startedTranslation) {
+                finishMessageTranslation(latestMessage, button);
+                startedTranslation = false;
+            }
+
+            await refreshMessageAndSave(latestContext, messageId, latestMessage);
             console.error(error);
             showError(error.message || "자동 번역 중 오류가 발생했습니다.");
         } finally {

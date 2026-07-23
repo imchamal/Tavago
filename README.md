@@ -17,6 +17,7 @@ Tavago is a minimal SillyTavern translation extension test.
 - Prevents duplicate translation requests on the same message while a translation is already running.
 - Stores the target language, prompt, and timestamp used for each saved message translation.
 - Marks saved message translations as outdated when they no longer match the current message translation settings.
+- Stores translation failure details and marks failed message buttons with an error color.
 
 ## Install for testing
 
