@@ -10,6 +10,7 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 // Tavago가 직접 만든 메시지 번역 버튼에 붙일 CSS 클래스 이름입니다.
 const messageButtonClass = "tavago_translate_message";
 const activeButtonClass = "tavago-active";
+const outdatedButtonClass = "tavago-outdated";
 const tavagoIconClass = "fa-solid fa-crow";
 const longPressMs = 650;
 const autoTranslateDelayMs = 1500;
@@ -18,23 +19,36 @@ const seenMessageIds = new Set();
 // 처음 실행할 때 사용할 기본 설정입니다.
 // 이미 저장된 설정이 있으면 getSettings()에서 이 값들과 합쳐집니다.
 const defaultSettings = {
-    targetLanguage: "Korean",
+    inputTargetLanguage: "English",
+    messageTargetLanguage: "Korean",
     autoTranslateMode: "ai",
     systemPrompt: [
-        "You are Tavago, a precise translation engine.",
+        "You are Tavago, a precise translation engine for SillyTavern chats.",
         "Translate the user's text into {{language}}.",
-        "Preserve names, markdown, code blocks, and roleplay formatting.",
+        "",
+        "Rules:",
         "Return only the translated text.",
+        "Preserve the original meaning, tone, and emotional nuance.",
+        "Preserve character names, speaker labels, markdown, code blocks, links, and placeholders.",
+        "Preserve roleplay formatting, including quoted speech, actions, thoughts, and line breaks.",
+        "Do not add explanations, summaries, notes, or extra commentary.",
+        "Do not censor, soften, or embellish the original text.",
     ].join("\n"),
 };
 
 // SillyTavern에 저장된 Tavago 설정을 읽습니다.
 // 빠진 값이 있으면 위의 기본 설정으로 채워줍니다.
 function getSettings() {
+    const savedSettings = extension_settings[extensionName] || {};
+
+    if (savedSettings.targetLanguage && !savedSettings.messageTargetLanguage) {
+        savedSettings.messageTargetLanguage = savedSettings.targetLanguage;
+    }
+
     extension_settings[extensionName] = Object.assign(
         {},
         defaultSettings,
-        extension_settings[extensionName] || {},
+        savedSettings,
     );
 
     return extension_settings[extensionName];
@@ -123,6 +137,24 @@ function hasSavedTranslation(message) {
     return Boolean(tavagoData.translated_text);
 }
 
+// 저장된 번역문이 현재 메시지 번역 설정과 다른지 확인합니다.
+// 목표 언어나 번역 지시문이 바뀌었으면 true가 됩니다.
+function isTranslationOutdated(message) {
+    const tavagoData = getTavagoData(message);
+
+    if (!tavagoData.translated_text) {
+        return false;
+    }
+
+    const settings = getSettings();
+    const promptInfo = buildTranslationPrompt(settings.messageTargetLanguage);
+
+    return (
+        tavagoData.target_language !== promptInfo.targetLanguage ||
+        tavagoData.prompt_used !== promptInfo.systemPrompt
+    );
+}
+
 // 저장된 번역문을 화면에 보여줍니다.
 function showTranslation(message) {
     const tavagoData = getTavagoData(message);
@@ -155,16 +187,59 @@ async function refreshMessageAndSave(context, messageId, message) {
 function updateMessageButtonState(message, button) {
     const tavagoData = getTavagoData(message);
     const isShowingTranslation = Boolean(tavagoData.showing_translation);
+    const isOutdated = isTranslationOutdated(message);
 
     button.toggleClass(activeButtonClass, isShowingTranslation);
+    button.toggleClass(outdatedButtonClass, isOutdated);
 
     if (!tavagoData.translated_text) {
         button.attr("title", "Tavago로 이 메시지 번역");
+    } else if (isOutdated) {
+        button.attr("title", "현재 메시지 번역 설정과 다른 번역입니다. 길게 누르면 재번역");
     } else if (isShowingTranslation) {
         button.attr("title", "원문 보기. 길게 누르면 재번역");
     } else {
         button.attr("title", "번역문 보기. 길게 누르면 재번역");
     }
+}
+
+// 실리태번 전송 버튼 근처에 입력창 번역 버튼을 붙입니다.
+// 설정창에 있던 버튼과 같은 id를 쓰므로 기존 translateInputTextarea()가 그대로 작동합니다.
+function addInputTranslateButtonToSendControls() {
+    if (document.querySelector("#tavago_translate_input")) {
+        return;
+    }
+
+    const sendButton = document.querySelector("#send_but");
+
+    if (!sendButton || !sendButton.parentElement) {
+        return;
+    }
+
+    const button = document.createElement("div");
+    button.id = "tavago_translate_input";
+    button.className = `${tavagoIconClass} interactable`;
+    button.title = "Tavago 입력창 번역";
+    button.tabIndex = 0;
+    button.setAttribute("role", "button");
+
+    button.addEventListener("click", translateInputTextarea);
+    button.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            translateInputTextarea();
+        }
+    });
+
+    sendButton.parentElement.insertBefore(button, sendButton);
+}
+
+// 입력 영역이 늦게 그려지는 경우를 대비해 전송 버튼 영역을 감시합니다.
+function watchInputTranslateButton() {
+    addInputTranslateButtonToSendControls();
+
+    const observer = new MutationObserver(addInputTranslateButtonToSendControls);
+    observer.observe(document.body, { childList: true, subtree: true });
 }
 
 // 메시지 번역 요청을 시작할 수 있는지 확인합니다.
@@ -193,22 +268,37 @@ function finishMessageTranslation(message, button) {
     updateMessageButtonState(message, button);
 }
 
+// 지정한 목표 언어를 바탕으로 실제 번역 지시문을 만듭니다.
+// {{language}} 자리에는 입력창용 또는 메시지용 목표 언어가 들어갑니다.
+function buildTranslationPrompt(targetLanguage) {
+    const settings = getSettings();
+
+    return {
+        targetLanguage,
+        systemPrompt: settings.systemPrompt.replaceAll("{{language}}", targetLanguage),
+    };
+}
+
 // 현재 SillyTavern에 연결된 API/모델에게 번역을 요청합니다.
 // Tavago는 별도 API 키를 받지 않고 generateRaw()를 사용합니다.
-async function translateText(text) {
+async function translateText(text, targetLanguage) {
     const context = getContext();
+    const promptInfo = buildTranslationPrompt(targetLanguage);
 
     if (typeof context.generateRaw !== "function") {
         throw new Error("현재 SillyTavern에서 generateRaw()를 찾을 수 없습니다.");
     }
 
-    const settings = getSettings();
-    const systemPrompt = settings.systemPrompt.replaceAll("{{language}}", settings.targetLanguage);
-
-    return await context.generateRaw({
-        systemPrompt,
+    const translatedText = await context.generateRaw({
+        systemPrompt: promptInfo.systemPrompt,
         prompt: text,
     });
+
+    return {
+        text: translatedText,
+        targetLanguage: promptInfo.targetLanguage,
+        promptUsed: promptInfo.systemPrompt,
+    };
 }
 
 // 아직 전송하지 않은 입력창 내용을 번역합니다.
@@ -231,11 +321,11 @@ async function translateInputTextarea() {
     const button = $("#tavago_translate_input");
     button.prop("disabled", true);
     button.addClass("tavago-busy");
-    button.find("span").text("번역 중...");
 
     try {
-        const translatedText = await translateText(originalText);
-        textarea.value = translatedText.trim();
+        const settings = getSettings();
+        const result = await translateText(originalText, settings.inputTargetLanguage);
+        textarea.value = result.text.trim();
         textarea.dispatchEvent(new Event("input", { bubbles: true }));
         showInfo("입력창 번역이 완료되었습니다.");
     } catch (error) {
@@ -244,7 +334,6 @@ async function translateInputTextarea() {
     } finally {
         button.prop("disabled", false);
         button.removeClass("tavago-busy");
-        button.find("span").text("입력창 번역");
     }
 }
 
@@ -258,8 +347,11 @@ async function translateAndSaveMessage(message, forceRetranslate = false) {
         return false;
     }
 
-    const translatedText = await translateText(message.mes);
-    tavagoData.translated_text = translatedText.trim();
+    const settings = getSettings();
+    const result = await translateText(message.mes, settings.messageTargetLanguage);
+    tavagoData.translated_text = result.text.trim();
+    tavagoData.target_language = result.targetLanguage;
+    tavagoData.prompt_used = result.promptUsed;
     tavagoData.translated_at = Date.now();
     showTranslation(message);
 
@@ -532,7 +624,8 @@ function watchChatMessages() {
 // 저장된 설정값을 설정창 화면에 채워 넣습니다.
 function loadSettingsToUi() {
     const settings = getSettings();
-    $("#tavago_target_language").val(settings.targetLanguage);
+    $("#tavago_input_target_language").val(settings.inputTargetLanguage);
+    $("#tavago_message_target_language").val(settings.messageTargetLanguage);
     $("#tavago_auto_translate_mode").val(settings.autoTranslateMode);
     $("#tavago_system_prompt").val(settings.systemPrompt);
 }
@@ -540,8 +633,13 @@ function loadSettingsToUi() {
 // 설정창의 입력 요소들을 Tavago 동작과 연결합니다.
 // 설정을 바꾸면 SillyTavern 설정 저장 기능으로 자동 저장됩니다.
 function bindSettingsEvents() {
-    $("#tavago_target_language").on("input", function () {
-        getSettings().targetLanguage = String($(this).val() || "Korean").trim() || "Korean";
+    $("#tavago_input_target_language").on("input", function () {
+        getSettings().inputTargetLanguage = String($(this).val() || "English").trim() || "English";
+        saveSettingsDebounced();
+    });
+
+    $("#tavago_message_target_language").on("input", function () {
+        getSettings().messageTargetLanguage = String($(this).val() || "Korean").trim() || "Korean";
         saveSettingsDebounced();
     });
 
@@ -554,8 +652,6 @@ function bindSettingsEvents() {
         getSettings().systemPrompt = String($(this).val() || defaultSettings.systemPrompt);
         saveSettingsDebounced();
     });
-
-    $("#tavago_translate_input").on("click", translateInputTextarea);
 }
 
 // Tavago 시작 지점입니다.
@@ -569,4 +665,5 @@ jQuery(async () => {
     loadSettingsToUi();
     bindSettingsEvents();
     watchChatMessages();
+    watchInputTranslateButton();
 });

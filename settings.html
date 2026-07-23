@@ -5,11 +5,17 @@
         <span>Tavago</span>
     </div>
 
-    <!-- 번역 프롬프트에서 사용할 목표 언어입니다. -->
-    <label class="tavago-label" for="tavago_target_language">
-        번역할 언어
+    <!-- 입력창 내용을 번역할 목표 언어입니다. 보통 한국어로 쓴 뒤 영어로 보낼 때 씁니다. -->
+    <label class="tavago-label" for="tavago_input_target_language">
+        입력창 번역 언어
     </label>
-    <input id="tavago_target_language" class="text_pole" type="text" value="Korean" />
+    <input id="tavago_input_target_language" class="text_pole" type="text" value="English" />
+
+    <!-- 채팅 메시지를 화면에서 읽기 좋게 번역할 목표 언어입니다. -->
+    <label class="tavago-label" for="tavago_message_target_language">
+        메시지 번역 언어
+    </label>
+    <input id="tavago_message_target_language" class="text_pole" type="text" value="Korean" />
 
     <!-- 새 메시지가 생겼을 때 어떤 메시지를 자동 번역할지 정합니다. -->
     <label class="tavago-label" for="tavago_auto_translate_mode">
@@ -28,16 +34,8 @@
     </label>
     <textarea id="tavago_system_prompt" class="text_pole textarea_compact" rows="5"></textarea>
 
-    <!-- 아직 전송하지 않은 입력창 내용만 번역하는 테스트 버튼입니다. -->
-    <div class="tavago-actions">
-        <button id="tavago_translate_input" class="menu_button">
-            <i class="fa-solid fa-crow"></i>
-            <span>입력창 번역</span>
-        </button>
-    </div>
-
     <!-- 메시지 옆 Tavago 아이콘 사용법입니다. -->
     <small class="tavago-help">
-        메시지의 새 아이콘을 누르면 번역/전환, 길게 누르면 재번역합니다.
+        전송 버튼 옆 새 아이콘은 입력창을 번역하고, 메시지의 새 아이콘은 번역/전환합니다. 길게 누르면 재번역합니다.
     </small>
 </div>
